@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>HDC Chess Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <style>
+        body { font-family: 'Rajdhani', sans-serif; background: radial-gradient(circle at center, #111827 0%, #000000 100%); color: white; margin: 0; padding: 10px; min-height: 100vh; }
+        h1, h2, h3 { font-family: 'Orbitron', sans-serif; }
+        .glass-panel { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+        #board { width: 100%; max-width: 420px; margin: 15px auto; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(16, 185, 129, 0.2); border-radius: 4px; overflow: hidden; }
+        
+        /* Neon Move Highlight Class */
+        .highlight-move { box-shadow: inset 0 0 15px 3px rgba(16, 185, 129, 0.9) !important; border-radius: 2px; }
+
+        .neon-input { background: rgba(0,0,0,0.5); border: 1px solid rgba(16, 185, 129, 0.3); color: #10B981; }
+        .neon-input:focus { outline: none; border-color: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .neon-btn { background: linear-gradient(90deg, #047857 0%, #10B981 100%); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); text-transform: uppercase; letter-spacing: 1px; }
+        .neon-btn:hover { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center">
+
+    <div id="auth-section" class="glass-panel p-8 rounded-2xl w-full max-w-sm mt-10">
+        <h2 class="text-3xl font-bold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500">HDC CORE</h2>
+        <div class="space-y-5">
+            <input type="text" id="username" placeholder="OPERATIVE ID" class="neon-input w-full p-3 rounded transition-all">
+            <input type="password" id="password" placeholder="ACCESS KEY" class="neon-input w-full p-3 rounded transition-all">
+            <button onclick="login()" class="neon-btn w-full p-3 rounded font-bold transition-all text-white">Initialize</button>
+            <button onclick="signup()" class="w-full bg-transparent border border-gray-500 hover:border-white p-3 rounded font-bold transition-all text-gray-300">Register</button>
+            <p id="auth-msg" class="text-red-400 text-sm text-center font-bold tracking-wide"></p>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="hidden glass-panel p-8 rounded-2xl w-full max-w-md text-center mt-6">
+        <h2 class="text-2xl font-bold mb-1 text-white">Welcome, <span id="dash-username" class="text-green-400"></span></h2>
+        <p class="text-md text-gray-400 mb-6 tracking-widest uppercase">Rank: <span id="dash-rank" class="text-blue-400 font-bold glow"></span></p>
+        
+        <div class="flex justify-around bg-black/40 p-4 rounded-xl mb-8 border border-white/5">
+            <div>
+                <p class="text-gray-500 text-xs uppercase tracking-widest">Neural Rating</p>
+                <p id="dash-elo" class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">0</p>
+            </div>
+            <div>
+                <p class="text-gray-500 text-xs uppercase tracking-widest">Victories</p>
+                <p id="dash-wins" class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-500">0</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <button onclick="startSinglePlayer()" class="neon-btn w-full p-3 rounded font-bold transition-all text-white">Boot AI Engine</button>
+            <div class="border-t border-gray-700 my-4 pt-6">
+                <p class="text-xs text-gray-500 mb-3 uppercase tracking-widest">Quantum Link (Multiplayer)</p>
+                <div class="flex space-x-2 mb-3">
+                    <input type="text" id="roomIdInput" placeholder="ENTER NODE ID" class="neon-input w-2/3 p-3 rounded text-center uppercase tracking-widest">
+                    <button onclick="joinRoom()" class="w-1/3 bg-blue-600 hover:bg-blue-500 rounded font-bold transition-all">LINK</button>
+                </div>
+                <button onclick="createRoom()" class="w-full bg-purple-600 hover:bg-purple-500 p-3 rounded font-bold transition-all">Generate New Node</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-section" class="hidden w-full max-w-md mt-4">
+        <div class="glass-panel p-4 rounded-xl mb-4 flex justify-between items-center">
+            <div>
+                <h2 class="text-lg font-bold text-green-400">ACTIVE SESSION</h2>
+                <p id="current-room-display" class="text-xs text-gray-400 tracking-widest uppercase"></p>
+            </div>
+            <button onclick="exitGame()" class="bg-red-900/80 hover:bg-red-600 border border-red-500 px-4 py-2 rounded font-bold text-sm transition-all">ABORT</button>
+        </div>
+        <div id="board"></div>
+        <div id="ai-loader" class="hidden mt-4 text-center">
+            <p class="text-green-400 text-sm font-bold tracking-widest animate-pulse">COMPILING HYPER-VECTORS...</p>
+        </div>
+    </div>
+
+    <script>
+        var board = null;
+        var game = new Chess();
+        var currentUser = null;
+        var currentMode = 'ai';
+        var currentRoomId = 'singleplayer';
+        var ws = null;
+
+        const moveSound = new Audio('https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3');
+        function playSound() { moveSound.currentTime = 0; moveSound.play().catch(e => console.log("Audio blocked by browser")); }
+
+        function authRequest(endpoint) {
+            const username = $('#username').val();
+            const password = $('#password').val();
+            if(!username || !password) return $('#auth-msg').text("FILL ALL FIELDS");
+
+            $.ajax({
+                type: 'POST', url: endpoint, contentType: 'application/json',
+                data: JSON.stringify({username: username, password: password}),
+                success: function(res) {
+                    $('#auth-msg').text("");
+                    if(endpoint === '/login') { currentUser = res; showDashboard(); } 
+                    else { $('#auth-msg').text("REGISTRATION SUCCESS").removeClass('text-red-400').addClass('text-green-400'); }
+                },
+                error: function(err) { $('#auth-msg').text(err.responseJSON.detail || "ACCESS DENIED").removeClass('text-green-400').addClass('text-red-400'); }
+            });
+        }
+
+        function login() { authRequest('/login'); }
+        function signup() { authRequest('/signup'); }
+
+        function showDashboard() {
+            $('#auth-section').addClass('hidden'); $('#game-section').addClass('hidden');
+            $('#dashboard-section').removeClass('hidden');
+            $('#dash-username').text(currentUser.username);
+            $('#dash-rank').text(currentUser.rank);
+            $('#dash-elo').text(currentUser.elo);
+            $('#dash-wins').text(currentUser.wins);
+            if(ws) { ws.close(); ws = null; }
+        }
+
+        // Highlight Logic
+        function removeHighlights() { $('#board .square-55d63').removeClass('highlight-move'); }
+        
+        function onMouseoverSquare(square, piece) {
+            if (game.game_over()) return;
+            if (piece && piece.search(/^b/) !== -1) return; // Sirf apne pieces highlight honge
+
+            var moves = game.moves({ square: square, verbose: true });
+            if (moves.length === 0) return;
+
+            $('#board .square-' + square).addClass('highlight-move');
+            for (var i = 0; i < moves.length; i++) {
+                $('#board .square-' + moves[i].to).addClass('highlight-move');
+            }
+        }
+        
+        function onMouseoutSquare(square, piece) { removeHighlights(); }
+
+        function initBoard() {
+            $('#dashboard-section').addClass('hidden'); $('#game-section').removeClass('hidden');
+            $('#ai-loader').addClass('hidden');
+            if(!board) {
+                var config = { 
+                    draggable: true, position: 'start', 
+                    onDragStart: onDragStart, onDrop: onDrop, onSnapEnd: onSnapEnd,
+                    onMouseoverSquare: onMouseoverSquare,
+                    onMouseoutSquare: onMouseoutSquare,
+                    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png' 
+                };
+                board = Chessboard('board', config);
+                $(window).resize(function() { board.resize(); });
+            }
+            game.reset(); board.start();
+        }
+
+        function startSinglePlayer() {
+            currentMode = 'ai'; currentRoomId = 'singleplayer_' + currentUser.username;
+            $('#current-room-display').text("OPPONENT: HDC ENGINE");
+            initBoard();
+            $.ajax({ type: 'POST', url: '/reset', contentType: 'application/json', data: JSON.stringify({room_id: currentRoomId}) });
+        }
+
+        function setupWebSocket(roomId) {
+            ws = new WebSocket("ws://" + window.location.host + "/ws/" + roomId);
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                if(data.status === 'success') {
+                    game.load(data.fen); 
+                    if(board) { board.position(game.fen()); playSound(); checkMatchStatus(); }
+                }
+            };
+        }
+
+        function createRoom() {
+            currentMode = 'multi'; currentRoomId = Math.floor(1000 + Math.random() * 9000).toString();
+            $('#current-room-display').text("NODE ID: " + currentRoomId);
+            initBoard();
+            $.ajax({ type: 'POST', url: '/reset', contentType: 'application/json', data: JSON.stringify({room_id: currentRoomId}), success: function() { setupWebSocket(currentRoomId); } });
+        }
+
+        function joinRoom() {
+            var roomInput = $('#roomIdInput').val();
+            if(!roomInput) return alert("ENTER NODE ID");
+            currentMode = 'multi'; currentRoomId = roomInput;
+            $('#current-room-display').text("NODE ID: " + currentRoomId);
+            initBoard(); setupWebSocket(currentRoomId);
+        }
+
+        function exitGame() { showDashboard(); }
+
+        function checkMatchStatus() {
+            if (game.game_over()) {
+                let result = 'loss';
+                if (game.in_checkmate() && game.turn() === 'b') { result = 'win'; }
+                if (currentMode === 'ai') {
+                    $.ajax({
+                        type: 'POST', url: '/game_over', contentType: 'application/json',
+                        data: JSON.stringify({username: currentUser.username, result: result}),
+                        success: function(res) {
+                            currentUser.elo = res.elo; currentUser.wins = res.wins; currentUser.rank = res.rank;
+                            alert(result === 'win' ? "HDC ENGINE DEFEATED! +50 ELO" : "SYSTEM FAILURE. YOU LOST.");
+                            showDashboard();
+                        }
+                    });
+                } else { alert("Match Over!"); showDashboard(); }
+            }
+        }
+
+        function onDragStart (source, piece) {
+            if (game.game_over()) return false;
+            if (currentMode === 'ai' && piece.search(/^b/) !== -1) return false;
+        }
+
+        function onDrop (source, target) {
+            removeHighlights();
+            var move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+            playSound();
+            if (currentMode === 'multi') {
+                ws.send(JSON.stringify({source: source, target: target}));
+            } else {
+                $('#ai-loader').removeClass('hidden');
+                $.ajax({
+                    type: 'POST', url: '/move', contentType: 'application/json',
+                    data: JSON.stringify({ source: source, target: target, mode: currentMode, room_id: currentRoomId, elo: currentUser.elo }),
+                    success: function(data) {
+                        $('#ai-loader').addClass('hidden');
+                        if(data.status === 'success') {
+                            game.load(data.fen); board.position(game.fen()); playSound(); checkMatchStatus();
+                        }
+                    },
+                    error: function() { $('#ai-loader').addClass('hidden'); }
+                });
+            }
+        }
+        function onSnapEnd () { board.position(game.fen()); }
+    </script>
+</body>
+</html>
